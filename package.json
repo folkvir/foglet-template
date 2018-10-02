@@ -27,9 +27,11 @@
   "homepage": "https://github.com/folkvir/foglet-template#readme",
   "dependencies": {
     "debug": "^4.0.1",
-    "foglet-core": "^5.0.1",
+    "foglet-core": "^5.1.0",
     "lodash.merge": "^4.6.1",
-    "tman-wrtc": "^1.0.0"
+    "sigma": "^1.2.1",
+    "tman-wrtc": "^1.0.0",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "mocha": "^5.2.0",
