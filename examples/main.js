@@ -1,6 +1,6 @@
 console.log(template) // eslint-disable-line
 // the bundle is included by default in the browser you do not have to require/import it
-localStorage.debug = 'template'
+localStorage.debug = '' // 'template'
 
 let rps = new sigma('rps')
 let overlay = new sigma('overlay')
@@ -10,6 +10,7 @@ const max = 10
 peers.push(new template(undefined, true))
 rps.graph.addNode({
   'id': peers[0].foglet.inViewID,
+  'firstLabel': 0 + '',
   'label': 0 + '',
   'x': 0,
   'y': 0,
@@ -18,6 +19,7 @@ rps.graph.addNode({
 overlay.graph.addNode({
   'id': peers[0].foglet.inViewID,
   'label': 0 + '',
+  'firstLabel': 0 + '',
   'x': 0,
   'y': 0,
   'size': 3
@@ -28,11 +30,13 @@ peers[0].on('rps-open', (id) => {
     'source': peers[0].foglet.inViewID,
     'target': id
   })
-  rps.refresh()
+  refresh(id, rps)
+  refresh(peers[0].foglet.inViewID, rps)
 })
 peers[0].on('rps-close', (id) => {
   rps.graph.dropEdge(id + '-' + peers[0].foglet.inViewID)
-  rps.refresh()
+  refresh(id, rps)
+  refresh(peers[0].foglet.inViewID, rps)
 })
 peers[0].on('overlay-open', (id) => {
   overlay.graph.addEdge({
@@ -40,11 +44,13 @@ peers[0].on('overlay-open', (id) => {
     'source': peers[0].foglet.inViewID,
     'target': id
   })
-  overlay.refresh()
+  refresh(id, overlay)
+  refresh(peers[0].foglet.inViewID, overlay)
 })
 peers[0].on('overlay-close', (id) => {
   overlay.graph.dropEdge(id + '-' + peers[0].foglet.inViewID)
-  overlay.refresh()
+  refresh(id, overlay)
+  refresh(peers[0].foglet.inViewID, overlay)
 })
 
 let p = []
@@ -58,14 +64,16 @@ p.reduce((acc, i) => acc.then(() => {
     rps.graph.addNode({
       'id': t.foglet.inViewID,
       'label': i + '',
-      'x': i,
+      'firstLabel': i + '',
+      'x': Math.floor(Math.random() * max),
       'y': Math.floor(Math.random() * max),
       'size': 3
     })
     overlay.graph.addNode({
       'id': t.foglet.inViewID,
       'label': i + '',
-      'x': i,
+      'firstLabel': i + '',
+      'x': Math.floor(Math.random() * max),
       'y': Math.floor(Math.random() * max),
       'size': 3
     })
@@ -75,11 +83,13 @@ p.reduce((acc, i) => acc.then(() => {
         'source': t.foglet.inViewID,
         'target': id
       })
-      rps.refresh()
+      refresh(id, rps)
+      refresh(t.foglet.inViewID, rps)
     })
     t.on('rps-close', (id) => {
       rps.graph.dropEdge(id + '-' + t.foglet.inViewID)
-      rps.refresh()
+      refresh(id, rps)
+      refresh(t.foglet.inViewID, rps)
     })
     t.on('overlay-open', (id) => {
       overlay.graph.addEdge({
@@ -87,11 +97,13 @@ p.reduce((acc, i) => acc.then(() => {
         'source': t.foglet.inViewID,
         'target': id
       })
-      overlay.refresh()
+      refresh(id, overlay)
+      refresh(t.foglet.inViewID, overlay)
     })
     t.on('overlay-close', (id) => {
       overlay.graph.dropEdge(id + '-' + t.foglet.inViewID)
-      overlay.refresh()
+      refresh(id, overlay)
+      refresh(t.foglet.inViewID, overlay)
     })
     const rn = Math.floor(Math.random() * peers.length)
     let p = peers[rn]
@@ -103,4 +115,45 @@ p.reduce((acc, i) => acc.then(() => {
       reject(e)
     })
   })
-}), Promise.resolve())
+}), Promise.resolve()).then(() => {
+  rps.graph.nodes().forEach(n => {
+    n.color = '#DC143C'
+  })
+  rps.refresh()
+  overlay.graph.nodes().forEach(n => {
+    n.color = '#FFA500'
+  })
+  overlay.refresh()
+
+  setListeners()
+  broadcast(peers[0], 'miaouBroadcast', undefined)
+  broadcast(peers[0], 'miaouBroadcast', 'tman')
+  peers[0].sendUnicastAll('miaouUnicast')
+})
+
+function broadcast (peer, message, overlay) {
+  peer.foglet.overlay(overlay).communication.sendBroadcast(message)
+}
+
+function setListeners () {
+  peers.forEach(p => {
+    p.on('receive-rps', (id, message) => {
+      console.log('[%s][RPS] receive an unicasted message from %s: ', p.foglet.id, id, message)
+    })
+    p.on('receive-overlay', (id, message) => {
+      console.log('[%s][OVERLAY] receive an unicasted message from %s: ', p.foglet.id, id, message)
+    })
+    p.foglet.overlay().communication.onBroadcast((id, message) => {
+      console.log('[%s][RPS] receive a broadcasted message from %s: ', p.foglet.id, id, message)
+    })
+    p.foglet.overlay('tman').communication.onBroadcast((id, message) => {
+      console.log('[%s][OVERLAY] receive a broadcasted message from %s: ', p.foglet.id, id, message)
+    })
+  })
+}
+
+function refresh (id, graph, overlay) {
+  const n = graph.graph.nodes(id)
+  n.label = n.firstLabel + ' d=' + graph.graph.degree(id)
+  graph.refresh()
+}
