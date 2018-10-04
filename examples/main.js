@@ -2,33 +2,53 @@ console.log(template) // eslint-disable-line
 // the bundle is included by default in the browser you do not have to require/import it
 localStorage.debug = '' // 'template'
 
-let rps = new sigma('rps')
-let overlay = new sigma('overlay')
+let rps = new sigma({
+  renderer: {
+    container: 'rps',
+    type: 'canvas'
+  },
+  settings: {
+    minArrowSize: 10
+  }
+})
+let overlay = new sigma({
+  renderer: {
+    container: 'overlay',
+    type: 'canvas'
+  },
+  settings: {
+    minArrowSize: 10
+  }
+})
 
 let peers = []
-const max = 10
+const max = 5
 peers.push(new template(undefined, true))
+const peerLabel = `(${peers[0].foglet.overlay('tman').network.descriptor.x},${peers[0].foglet.overlay('tman').network.descriptor.y})`
 rps.graph.addNode({
   'id': peers[0].foglet.inViewID,
-  'firstLabel': 0 + '',
-  'label': 0 + '',
-  'x': 0,
-  'y': 0,
+  'firstLabel': peerLabel,
+  'label': peerLabel,
+  'x': peers[0].foglet.overlay('tman').network.descriptor.x,
+  'y': peers[0].foglet.overlay('tman').network.descriptor.y,
   'size': 3
 })
+
 overlay.graph.addNode({
   'id': peers[0].foglet.inViewID,
-  'label': 0 + '',
-  'firstLabel': 0 + '',
-  'x': 0,
-  'y': 0,
+  'label': peerLabel,
+  'firstLabel': peerLabel,
+  'x': peers[0].foglet.overlay('tman').network.descriptor.x,
+  'y': peers[0].foglet.overlay('tman').network.descriptor.y,
   'size': 3
 })
+
 peers[0].on('rps-open', (id) => {
   rps.graph.addEdge({
     'id': id + '-' + peers[0].foglet.inViewID,
     'source': peers[0].foglet.inViewID,
-    'target': id
+    'target': id,
+    'type':'curvedArrow'
   })
   refresh(id, rps)
   refresh(peers[0].foglet.inViewID, rps)
@@ -42,7 +62,8 @@ peers[0].on('overlay-open', (id) => {
   overlay.graph.addEdge({
     'id': id + '-' + peers[0].foglet.inViewID,
     'source': peers[0].foglet.inViewID,
-    'target': id
+    'target': id,
+    'type':'curvedArrow'
   })
   refresh(id, overlay)
   refresh(peers[0].foglet.inViewID, overlay)
@@ -61,27 +82,29 @@ for (let i = 1; i < max; ++i) {
 p.reduce((acc, i) => acc.then(() => {
   return new Promise((resolve, reject) => {
     let t = new template(undefined, true)
+    let peerLabel = `(${t.foglet.overlay('tman').network.descriptor.x},${t.foglet.overlay('tman').network.descriptor.y})`
     rps.graph.addNode({
       'id': t.foglet.inViewID,
-      'label': i + '',
-      'firstLabel': i + '',
-      'x': Math.floor(Math.random() * max),
-      'y': Math.floor(Math.random() * max),
+      'label': peerLabel,
+      'firstLabel': peerLabel,
+      'x': t.foglet.overlay('tman').network.descriptor.x,
+      'y': t.foglet.overlay('tman').network.descriptor.y,
       'size': 3
     })
     overlay.graph.addNode({
       'id': t.foglet.inViewID,
-      'label': i + '',
-      'firstLabel': i + '',
-      'x': Math.floor(Math.random() * max),
-      'y': Math.floor(Math.random() * max),
+      'label': peerLabel,
+      'firstLabel': peerLabel,
+      'x': t.foglet.overlay('tman').network.descriptor.x,
+      'y': t.foglet.overlay('tman').network.descriptor.y,
       'size': 3
     })
     t.on('rps-open', (id) => {
       rps.graph.addEdge({
         'id': id + '-' + t.foglet.inViewID,
         'source': t.foglet.inViewID,
-        'target': id
+        'target': id,
+        'type':'curvedArrow'
       })
       refresh(id, rps)
       refresh(t.foglet.inViewID, rps)
@@ -95,7 +118,8 @@ p.reduce((acc, i) => acc.then(() => {
       overlay.graph.addEdge({
         'id': id + '-' + t.foglet.inViewID,
         'source': t.foglet.inViewID,
-        'target': id
+        'target': id,
+        'type':'curvedArrow'
       })
       refresh(id, overlay)
       refresh(t.foglet.inViewID, overlay)
