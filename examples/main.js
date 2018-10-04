@@ -2,6 +2,10 @@ console.log(template) // eslint-disable-line
 // the bundle is included by default in the browser you do not have to require/import it
 localStorage.debug = '' // 'template'
 
+sigma.classes.graph.addMethod('findNode', function(id){
+  return this.nodesArray.filter((node)=>node.id===id).shift()
+})
+
 let rps = new sigma({
   renderer: {
     container: 'rps',
@@ -22,6 +26,7 @@ let overlay = new sigma({
 })
 
 let peers = []
+
 const max = 5
 peers.push(new template(undefined, true))
 const peerLabel = `(${peers[0].foglet.overlay('tman').network.descriptor.x},${peers[0].foglet.overlay('tman').network.descriptor.y})`
@@ -41,6 +46,28 @@ overlay.graph.addNode({
   'x': peers[0].foglet.overlay('tman').network.descriptor.x,
   'y': peers[0].foglet.overlay('tman').network.descriptor.y,
   'size': 3
+})
+
+peers[0].on('changelocation', (foglet)=>{
+  
+  let rpsnode = rps.graph.findNode(foglet.inViewID)
+  let tmannode = overlay.graph.findNode(foglet.inViewID)
+  let x = foglet.overlay('tman').network.descriptor.x
+  let y = foglet.overlay('tman').network.descriptor.y
+  let peerLabel = `(${x},${y})`
+  console.log('changelocation', peerLabel)
+  rpsnode.firstLabel = peerLabel
+  tmannode.firstLabel = peerLabel
+  refresh(foglet.inViewID, overlay)
+  refresh(foglet.inViewID, rps)
+  refresh(peers[0].foglet.inViewID, rps)
+  refresh(peers[0].foglet.inViewID, overlay)
+  rpsnode.x = x
+  rpsnode.y = y
+  tmannode.x = x
+  tmannode.y = y
+  rps.refresh()
+  overlay.refresh()
 })
 
 peers[0].on('rps-open', (id) => {
@@ -82,6 +109,7 @@ for (let i = 1; i < max; ++i) {
 p.reduce((acc, i) => acc.then(() => {
   return new Promise((resolve, reject) => {
     let t = new template(undefined, true)
+
     let peerLabel = `(${t.foglet.overlay('tman').network.descriptor.x},${t.foglet.overlay('tman').network.descriptor.y})`
     rps.graph.addNode({
       'id': t.foglet.inViewID,
@@ -99,6 +127,28 @@ p.reduce((acc, i) => acc.then(() => {
       'y': t.foglet.overlay('tman').network.descriptor.y,
       'size': 3
     })
+
+    t.on('changelocation', (foglet)=>{
+      console.log('changelocation', foglet)
+      let rpsnode = rps.graph.findNode(foglet.inViewID)
+      let tmannode = overlay.graph.findNode(foglet.inViewID)
+      let x = foglet.overlay('tman').network.descriptor.x
+      let y = foglet.overlay('tman').network.descriptor.y
+      let peerLabel = `(${x},${y})`
+      rpsnode.firstLabel = peerLabel
+      tmannode.firstLabel = peerLabel
+      refresh(foglet.inViewID, overlay)
+      refresh(foglet.inViewID, rps)
+      refresh(t.foglet.inViewID, rps)
+      refresh(t.foglet.inViewID, overlay)
+      rpsnode.x = x
+      rpsnode.y = y
+      tmannode.x = x
+      tmannode.y = y
+      rps.refresh()
+      overlay.refresh()
+    })
+
     t.on('rps-open', (id) => {
       rps.graph.addEdge({
         'id': id + '-' + t.foglet.inViewID,
@@ -180,4 +230,13 @@ function refresh (id, graph, overlay) {
   const n = graph.graph.nodes(id)
   n.label = n.firstLabel + ' d=' + graph.graph.degree(id)
   graph.refresh()
+}
+
+
+let scramble = (delay = 0) => {
+  for (let i = 0; i < max; ++i) {
+    setTimeout((nth) => {
+      peers[nth].foglet.overlay('tman')._network.rps._exchange() // force exchange
+    }, i * delay, i)
+  };
 }
