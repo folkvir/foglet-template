@@ -108,6 +108,7 @@ for (let i = 1; i < max; ++i) {
   p.push(i)
 }
 
+
 randomColor = () => {
   let letters = '0123456789ABCDEF';
   let color = '#';
