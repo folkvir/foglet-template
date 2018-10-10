@@ -25,18 +25,20 @@ let overlay = new sigma({
   }
 })
 
+let deplace = 60
+
 let peers = []
 
-const max = 5
+const max = 10
 peers.push(new template(undefined, true))
-const peerLabel = `(${peers[0].foglet.overlay('tman').network.descriptor.x},${peers[0].foglet.overlay('tman').network.descriptor.y})`
+const peerLabel = `${peers[0].foglet.inViewID.slice(0,4)} (${peers[0].foglet.overlay('tman').network.descriptor.x},${peers[0].foglet.overlay('tman').network.descriptor.y})`
 rps.graph.addNode({
   'id': peers[0].foglet.inViewID,
   'firstLabel': peerLabel,
   'label': peerLabel,
   'x': peers[0].foglet.overlay('tman').network.descriptor.x,
   'y': peers[0].foglet.overlay('tman').network.descriptor.y,
-  'size': 3
+  'size': 1
 })
 
 overlay.graph.addNode({
@@ -45,7 +47,7 @@ overlay.graph.addNode({
   'firstLabel': peerLabel,
   'x': peers[0].foglet.overlay('tman').network.descriptor.x,
   'y': peers[0].foglet.overlay('tman').network.descriptor.y,
-  'size': 3
+  'size': 1
 })
 
 peers[0].on('changelocation', (foglet)=>{
@@ -106,104 +108,134 @@ for (let i = 1; i < max; ++i) {
   p.push(i)
 }
 
-p.reduce((acc, i) => acc.then(() => {
-  return new Promise((resolve, reject) => {
-    let t = new template(undefined, true)
+randomColor = () => {
+  let letters = '0123456789ABCDEF';
+  let color = '#';
+  for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
 
-    let peerLabel = `(${t.foglet.overlay('tman').network.descriptor.x},${t.foglet.overlay('tman').network.descriptor.y})`
-    rps.graph.addNode({
-      'id': t.foglet.inViewID,
-      'label': peerLabel,
-      'firstLabel': peerLabel,
-      'x': t.foglet.overlay('tman').network.descriptor.x,
-      'y': t.foglet.overlay('tman').network.descriptor.y,
-      'size': 3
-    })
-    overlay.graph.addNode({
-      'id': t.foglet.inViewID,
-      'label': peerLabel,
-      'firstLabel': peerLabel,
-      'x': t.foglet.overlay('tman').network.descriptor.x,
-      'y': t.foglet.overlay('tman').network.descriptor.y,
-      'size': 3
-    })
+let  colors = []
 
-    t.on('changelocation', (foglet)=>{
-      console.log('changelocation', foglet)
-      let rpsnode = rps.graph.findNode(foglet.inViewID)
-      let tmannode = overlay.graph.findNode(foglet.inViewID)
-      let x = foglet.overlay('tman').network.descriptor.x
-      let y = foglet.overlay('tman').network.descriptor.y
-      let peerLabel = `(${x},${y})`
-      rpsnode.firstLabel = peerLabel
-      tmannode.firstLabel = peerLabel
-      refresh(foglet.inViewID, overlay)
-      refresh(foglet.inViewID, rps)
-      refresh(t.foglet.inViewID, rps)
-      refresh(t.foglet.inViewID, overlay)
-      rpsnode.x = x
-      rpsnode.y = y
-      tmannode.x = x
-      tmannode.y = y
-      rps.refresh()
-      overlay.refresh()
-    })
-
-    t.on('rps-open', (id) => {
-      rps.graph.addEdge({
-        'id': id + '-' + t.foglet.inViewID,
-        'source': t.foglet.inViewID,
-        'target': id,
-        'type':'curvedArrow'
-      })
-      refresh(id, rps)
-      refresh(t.foglet.inViewID, rps)
-    })
-    t.on('rps-close', (id) => {
-      rps.graph.dropEdge(id + '-' + t.foglet.inViewID)
-      refresh(id, rps)
-      refresh(t.foglet.inViewID, rps)
-    })
-    t.on('overlay-open', (id) => {
-      overlay.graph.addEdge({
-        'id': id + '-' + t.foglet.inViewID,
-        'source': t.foglet.inViewID,
-        'target': id,
-        'type':'curvedArrow'
-      })
-      refresh(id, overlay)
-      refresh(t.foglet.inViewID, overlay)
-    })
-    t.on('overlay-close', (id) => {
-      overlay.graph.dropEdge(id + '-' + t.foglet.inViewID)
-      refresh(id, overlay)
-      refresh(t.foglet.inViewID, overlay)
-    })
-    const rn = Math.floor(Math.random() * peers.length)
-    let p = peers[rn]
-    peers.push(t)
-    t.connection(p).then(() => {
-      rps.refresh()
-      setTimeout(resolve, 500)
-    }).catch(e => {
-      reject(e)
-    })
+let colorsPromise = new Promise((resolve, reject)=>{
+  p.reduce((acc, i)=>{
+    colors[(i-2)] = randomColor()
   })
-}), Promise.resolve()).then(() => {
-  rps.graph.nodes().forEach(n => {
-    n.color = '#DC143C'
-  })
-  rps.refresh()
-  overlay.graph.nodes().forEach(n => {
-    n.color = '#FFA500'
-  })
-  overlay.refresh()
-
-  setListeners()
-  broadcast(peers[0], 'miaouBroadcast', undefined)
-  broadcast(peers[0], 'miaouBroadcast', 'tman')
-  peers[0].sendUnicastAll('miaouUnicast')
+  setTimeout(resolve, 100)
 })
+
+colorsPromise.then(()=>{
+  p.reduce((acc, i) => acc.then(() => {
+    return new Promise((resolve, reject) => {
+      let t = new template(undefined, true)
+      console.log(colors[i-1])
+      let peerLabel = `${t.foglet.inViewID.slice(0,4)} (${t.foglet.overlay('tman').network.descriptor.x},${t.foglet.overlay('tman').network.descriptor.y})`
+      rps.graph.addNode({
+        'id': t.foglet.inViewID,
+        'label': peerLabel,
+        'firstLabel': peerLabel,
+        'x': t.foglet.overlay('tman').network.descriptor.x,
+        'y': t.foglet.overlay('tman').network.descriptor.y,
+        'size': 1,
+        'color':colors[i-1]
+      })
+      overlay.graph.addNode({
+        'id': t.foglet.inViewID,
+        'label': peerLabel,
+        'firstLabel': peerLabel,
+        'x': t.foglet.overlay('tman').network.descriptor.x,
+        'y': t.foglet.overlay('tman').network.descriptor.y,
+        'size': 1,
+        'color':colors[i-1]
+      })
+  
+      t.on('changelocation', (foglet)=>{
+        console.log('changelocation', foglet)
+        let rpsnode = rps.graph.findNode(foglet.inViewID)
+        let tmannode = overlay.graph.findNode(foglet.inViewID)
+        let x = foglet.overlay('tman').network.descriptor.x
+        let y = foglet.overlay('tman').network.descriptor.y
+        let peerLabel = `(${x},${y})`
+        rpsnode.firstLabel = peerLabel
+        tmannode.firstLabel = peerLabel
+        refresh(foglet.inViewID, overlay)
+        refresh(foglet.inViewID, rps)
+        refresh(t.foglet.inViewID, rps)
+        refresh(t.foglet.inViewID, overlay)
+        rpsnode.x = x
+        rpsnode.y = y
+        tmannode.x = x
+        tmannode.y = y
+        rps.refresh()
+        overlay.refresh()
+      })
+  
+      t.on('rps-open', (id) => {
+        rps.graph.addEdge({
+          'id': id + '-' + t.foglet.inViewID,
+          'source': t.foglet.inViewID,
+          'target': id,
+          'type':'curvedArrow'
+        })
+        refresh(id, rps)
+        refresh(t.foglet.inViewID, rps)
+      })
+      t.on('rps-close', (id) => {
+        rps.graph.dropEdge(id + '-' + t.foglet.inViewID)
+        refresh(id, rps)
+        refresh(t.foglet.inViewID, rps)
+      })
+      t.on('overlay-open', (id) => {
+        overlay.graph.addEdge({
+          'id': id + '-' + t.foglet.inViewID,
+          'source': t.foglet.inViewID,
+          'target': id,
+          'type':'curvedArrow'
+        })
+        refresh(id, overlay)
+        refresh(t.foglet.inViewID, overlay)
+      })
+      t.on('overlay-close', (id) => {
+        overlay.graph.dropEdge(id + '-' + t.foglet.inViewID)
+        refresh(id, overlay)
+        refresh(t.foglet.inViewID, overlay)
+      })
+      const rn = Math.floor(Math.random() * peers.length)
+      let p = peers[rn]
+      peers.push(t)
+      t.connection(p).then(() => {
+        rps.refresh()
+        setTimeout(resolve, 500)
+      }).catch(e => {
+        reject(e)
+      })
+    })
+  }), Promise.resolve()).then(() => {
+    /*rps.graph.nodes().forEach(n => {
+      // n.color = '#DC143C'
+    })*/
+    rps.refresh()
+    /*overlay.graph.nodes().forEach(n => {
+      // n.color = '#FFA500'
+    })*/
+    overlay.refresh()
+
+      setInterval(()=>{
+        let x = Math.floor(Math.random()*20)
+        let y = Math.floor(Math.random()*20)
+        peers[0].changeLocation(x,y)
+      }, deplace * 1000)
+  
+    setListeners()
+    broadcast(peers[0], 'miaouBroadcast', undefined)
+    broadcast(peers[0], 'miaouBroadcast', 'tman')
+    peers[0].sendUnicastAll('miaouUnicast')
+  })
+})
+
+
 
 function broadcast (peer, message, overlay) {
   peer.foglet.overlay(overlay).communication.sendBroadcast(message)
