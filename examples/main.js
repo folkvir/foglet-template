@@ -25,12 +25,28 @@ let overlay = new sigma({
   }
 })
 
-let deplace = 60
+let deplace = 3600
 
 let peers = []
 
-const max = 10
-peers.push(new template(undefined, true))
+const max = 20
+let maxPeers = 2
+peers.push(new template({foglet:{
+  overlays: [
+    {
+      name: 'tman',
+      options: {
+        delta: 1 * 1000,
+        maxPeers: maxPeers,
+        pendingTimeout: 2 * 1000,
+        descriptor:{
+          x : 0,
+          y : 0
+        }
+      }
+    }
+  ]
+}}, true))
 const peerLabel = `${peers[0].foglet.inViewID.slice(0,4)} (${peers[0].foglet.overlay('tman').network.descriptor.x},${peers[0].foglet.overlay('tman').network.descriptor.y})`
 rps.graph.addNode({
   'id': peers[0].foglet.inViewID,
@@ -130,7 +146,24 @@ let colorsPromise = new Promise((resolve, reject)=>{
 colorsPromise.then(()=>{
   p.reduce((acc, i) => acc.then(() => {
     return new Promise((resolve, reject) => {
-      let t = new template(undefined, true)
+      let x = i*2;
+      let y = i%5;
+      let t = new template({foglet:{
+        overlays: [
+          {
+            name: 'tman',
+            options: {
+              delta: 2 * 1000,
+              pendingTimeout: 3600 * 1000,
+              maxPeers: maxPeers,
+              descriptor:{
+                x : x,
+                y : y
+              }
+            }
+          }
+        ]
+      }}, true)
       console.log(colors[i-1])
       let peerLabel = `${t.foglet.inViewID.slice(0,4)} (${t.foglet.overlay('tman').network.descriptor.x},${t.foglet.overlay('tman').network.descriptor.y})`
       rps.graph.addNode({
@@ -223,16 +256,26 @@ colorsPromise.then(()=>{
     })*/
     overlay.refresh()
 
-      setInterval(()=>{
+      /*setInterval(()=>{
         let x = Math.floor(Math.random()*20)
         let y = Math.floor(Math.random()*20)
         peers[0].changeLocation(x,y)
-      }, deplace * 1000)
+      }, deplace * 1000)*/
   
     setListeners()
-    broadcast(peers[0], 'miaouBroadcast', undefined)
-    broadcast(peers[0], 'miaouBroadcast', 'tman')
-    peers[0].sendUnicastAll('miaouUnicast')
+    
+    
+    /*for(let i=0; i<peers.length; i++){
+      /*for(let j=0; i<peers.length; j++){
+        if(i!=j){
+
+        }
+      }
+      broadcast(peers[i], 'miaouBroadcast', undefined)
+      broadcast(peers[i], 'miaouBroadcast', 'tman')
+      peers[i].sendUnicastAll('miaouUnicast')
+  }*/
+    
   })
 })
 
