@@ -8,6 +8,7 @@ const overlay = createSigma("overlay");
 // Creating peers and sigma nodes
 const max = 10;
 const peers = [];
+const delta = 100000000000
 for (let i = 0; i < max; i++) {
   //  const fogletTemplate = new template(undefined, true);
   const fogletTemplate = new template(
@@ -17,7 +18,7 @@ for (let i = 0; i < max; i++) {
           {
             name: "tman",
             options: {
-              delta: 2 * 1000,
+              delta: delta,
               timeout: 5 * 1000,
               pendingTimeout: 5 * 1000,
               maxPeers: MAX_PEERS,
@@ -86,3 +87,12 @@ forEachPromise(peers, (peer, index) => {
   // Firing change location loop
   // updateLocation(peers);
 });
+
+
+let scramble = (delay = 0) => {
+  for (let i = 0; i < max; ++i) {
+    setTimeout((nth) => {
+      peers[nth].foglet.overlay('tman')._network.rps._exchange() // force exchange
+    }, i * delay, i)
+  };
+}
