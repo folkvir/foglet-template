@@ -14,6 +14,7 @@ for (let i = 0; i < max; i++) {
   const fogletTemplate = new template(
     {
       foglet: {
+        id: i + '',
         overlays: [
           {
             name: "tman",
