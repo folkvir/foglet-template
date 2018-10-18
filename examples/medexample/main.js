@@ -1,14 +1,14 @@
 console.log(template); // eslint-disable-line
 // the bundle is included by default in the browser you do not have to require/import it
 localStorage.debug = ""; // 'template'
-const MAX_PEERS = 4;
+const MAX_PEERS = 10;
 // Create sigma graphs _________
 // const rps = createSigma("rps");
 const overlay = createSigma("overlay");
 // Creating peers and sigma nodes
-const max = 10;
+const max = 50;
 const peers = [];
-const delta = 100000000000
+const delta = 10 * 1000
 for (let i = 0; i < max; i++) {
   //  const fogletTemplate = new template(undefined, true);
   const fogletTemplate = new template(
@@ -24,8 +24,8 @@ for (let i = 0; i < max; i++) {
               pendingTimeout: 5 * 1000,
               maxPeers: MAX_PEERS,
               descriptor: {
-                x: i * 2,
-                y: i % 5
+                x: Math.floor(Math.random() * 50),
+                y: Math.floor(Math.random() * 50)
               }
             }
           }
@@ -83,11 +83,22 @@ forEachPromise(peers, (peer, index) => {
 }).then(() => {
   // rps.refresh();
   // overlay.refresh();
+  // console.log("end promise")
+  
   // Set broadcast listeners
-  setListeners();
+  // setListeners();
   // Firing change location loop
   // updateLocation(peers);
 });
+
+
+const i = setInterval(()=>{
+  const conv = convergence();
+  if(conv===100){
+    clearInterval(i)
+  }
+  console.log(conv+ '%')
+}, 1 * 1000)
 
 
 let scramble = (delay = 0) => {
@@ -96,4 +107,50 @@ let scramble = (delay = 0) => {
       peers[nth].foglet.overlay('tman')._network.rps._exchange() // force exchange
     }, i * delay, i)
   };
+}
+
+var convergence = () => { 
+	var getDistance = (a,b) => {
+		  var dx = a.x - b.x;
+		  var dy = a.y - b.y;
+		  return Math.sqrt(dx * dx + dy * dy);
+		};
+	var voisins = new Array(); 
+	var fails = 0;
+	for (let i = 0; 
+		i < overlay.graph.nodes().length; i++) {
+		for (let j =0; j < overlay.graph.nodes().length ; j++ ) {
+				voisins[j] = getDistance(overlay.graph.nodes()[i], overlay.graph.nodes()[j]);
+		}
+		// Là on a la distance à tous les autres voisins. 
+		var min;
+		for ( let k = 1; k<= MAX_PEERS ; k++){
+			if (voisins[0] == 0){
+				min = 1;
+			} else { min = 0; }
+			for(let l=0; l<voisins.length; l++){
+				if(voisins[l] != 0){
+					if(voisins[min] > voisins[l]){
+						min = l; 
+					}
+				}
+			} // Là on a le voisin le + proche. 
+			var jelai = false; 
+			for (let m =0; m < overlay.graph.edges().length;
+			m++){
+				if (overlay.graph.edges()[m].source == overlay.graph.nodes()[i].id){
+					if (overlay.graph.edges()[m].target == overlay.graph.nodes()[min].id){
+						jelai = true;
+					}
+				}
+			}
+			if (!jelai) {
+				fails++;
+			}
+			voisins[min]=1000;
+			
+		}
+		
+	}
+	return (Math.floor(((overlay.graph.edges().length-fails) / (overlay.graph.edges().length))*100 ));
 }
