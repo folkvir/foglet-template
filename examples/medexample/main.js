@@ -1,14 +1,15 @@
 console.log(template); // eslint-disable-line
 // the bundle is included by default in the browser you do not have to require/import it
 localStorage.debug = ""; // 'template'
-const MAX_PEERS = 10;
+const MAX_PEERS = 5;
 // Create sigma graphs _________
 // const rps = createSigma("rps");
+//myChart;
 const overlay = createSigma("overlay");
 // Creating peers and sigma nodes
 const max = 50;
 const peers = [];
-const delta = 2 * 1000
+const delta = 10 * 1000
 for (let i = 0; i < max; i++) {
   //  const fogletTemplate = new template(undefined, true);
   const fogletTemplate = new template(
@@ -24,9 +25,8 @@ for (let i = 0; i < max; i++) {
               pendingTimeout: 5 * 1000,
               maxPeers: MAX_PEERS,
               descriptor: {
-                x: Math.floor(Math.random() * 100), //   i * 2, // 
-                y:  Math.floor(Math.random() * 50), // i % 5 // 
-                z: Math.floor(Math.random() * 50)
+                x: Math.floor(Math.random() * max),
+                y: Math.floor(Math.random() * max)
               }
             }
           }
@@ -93,6 +93,16 @@ forEachPromise(peers, (peer, index) => {
 });
 
 
+const i = setInterval(()=>{
+  const conv = convergence();
+  if(conv >=90){
+    clearInterval(i);
+    getCoords()
+  }
+  console.log(conv+ '%')
+}, 1* 1000)
+
+
 let scramble = (delay = 0) => {
   for (let i = 0; i < max; ++i) {
     setTimeout((nth) => {
@@ -146,6 +156,67 @@ var convergence = () => {
 	}
 	return (Math.floor(((overlay.graph.edges().length-fails) / (overlay.graph.edges().length))*100 ));
 }
+
+
+ranking = (a) => (b, c) => {
+  const distanceA = (
+    Math.sqrt(
+      Math.pow((a.x - b.x), 2) +
+      Math.pow((a.y - b.y), 2)
+    ))
+  const distanceB = (
+    Math.sqrt(
+      Math.pow((a.x - c.x), 2) +
+      Math.pow((a.y - c.y), 2)
+    ))
+  return distanceA > distanceB ? 1 : distanceA == distanceB ? 0 : -1
+}
+
+
+getCoords = function() {
+  var x = document.getElementById('tbNames')
+  while (x.rows.length > 1) {
+    for (l = 1; l < x.rows.length; ++l) {
+      x.deleteRow(l)
+    }
+  }
+  for (let i = 0; i < max; i++) {
+    voisins = JSON.parse(JSON.stringify(overlay.graph.nodes())).sort(ranking(overlay.graph.nodes()[i])).slice(1,MAX_PEERS+1);
+    lesCoords =''
+    cpt = 0;
+    for (let l = 0; l< MAX_PEERS;++l) {
+      for (let m = 0; m < overlay.graph.edges().length; ++m) {
+        if ((overlay.graph.edges()[m].source == overlay.graph.nodes()[i].id) &&
+          (overlay.graph.edges()[m].target ==voisins[l].id)) {
+            lesCoords = lesCoords + '(' + voisins[l].x + ',' + voisins[l].y + ') '
+            ++cpt
+        }
+      }
+    }
+    var x = document.getElementById('tbNames')
+    var row = x.insertRow(i+1)
+    row.insertCell(0).innerHTML =  '(' +overlay.graph.nodes()[i].x +','+overlay.graph.nodes()[i].y+')';
+    row.insertCell(1).innerHTML = lesCoords;
+    row.insertCell(2).innerHTML = getCoordsList(voisins);
+    row.insertCell(3).innerHTML = cpt/MAX_PEERS *100 +"%"
+  }
+
+
+}
+
+getCoordsList = function (list) {
+  coords = ''
+  list.forEach((l) => {
+    coords = coords + '(' + l.x + ',' + l.y + ') '
+  })
+  return coords
+}
+
+// setTimeout(()=>{
+//   getCoords()
+//   },10000
+//
+// )
 
 /*const e = setInterval(()=>{
   const conv = convergence();
@@ -218,7 +289,7 @@ compareNeighbours = (tab1, tab2) => {
     let differenceA = new Set([...a].filter(x => !b.has(x)));
     let differenceB = new Set([...b].filter(x => !a.has(x)));
     let unionAB = new Set([...differenceA, ...differenceB]);
-    
+
     let contains = false
     let nextIte = iterator.next().value
     if(nextIte){
@@ -227,7 +298,7 @@ compareNeighbours = (tab1, tab2) => {
           if(nextIte.has(id+'-'+id1)){
             contains = true
           }
-        } 
+        }
       }
     }
     let numerateur = b;
@@ -242,13 +313,20 @@ compareNeighbours = (tab1, tab2) => {
 doConvergence = () => {
   let ranked = getRanked().map(r=>r.map(r1=>r1.id));
   let span = document.getElementById("converge");
-
+  let axeY = [0];
+  let axeX = [0];
+  cpt = 0;
+  graph = createGraph();
   const i = setInterval(()=>{
     const conv = compareNeighbours(ranked, peersNeighbours());
+    axeY.push(conv);
+    axeX.push(cpt)
+    updateDatas(axeX,axeY)
     if(conv===100){
       clearInterval(i)
     }
     span.innerHTML = conv+ '%'
+    ++cpt
     // console.log(conv+ '%')
   }, 3 * 1000)
 }
