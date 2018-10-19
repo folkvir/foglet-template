@@ -8,7 +8,7 @@ const overlay = createSigma("overlay");
 // Creating peers and sigma nodes
 const max = 50;
 const peers = [];
-const delta = 10 * 1000
+const delta = 2 * 1000
 for (let i = 0; i < max; i++) {
   //  const fogletTemplate = new template(undefined, true);
   const fogletTemplate = new template(
@@ -24,8 +24,9 @@ for (let i = 0; i < max; i++) {
               pendingTimeout: 5 * 1000,
               maxPeers: MAX_PEERS,
               descriptor: {
-                x: Math.floor(Math.random() * 50),
-                y: Math.floor(Math.random() * 50)
+                x: Math.floor(Math.random() * 100), //   i * 2, // 
+                y:  Math.floor(Math.random() * 50), // i % 5 // 
+                z: Math.floor(Math.random() * 50)
               }
             }
           }
@@ -78,7 +79,7 @@ forEachPromise(peers, (peer, index) => {
       setTimeout(() => {
         peer.connection(randomPeer).then(resolve);
       }),
-    index * 500
+    index
   );
 }).then(() => {
   // rps.refresh();
@@ -90,15 +91,6 @@ forEachPromise(peers, (peer, index) => {
   // Firing change location loop
   // updateLocation(peers);
 });
-
-
-const i = setInterval(()=>{
-  const conv = convergence();
-  if(conv===100){
-    clearInterval(i)
-  }
-  console.log(conv+ '%')
-}, 1 * 1000)
 
 
 let scramble = (delay = 0) => {
@@ -154,3 +146,112 @@ var convergence = () => {
 	}
 	return (Math.floor(((overlay.graph.edges().length-fails) / (overlay.graph.edges().length))*100 ));
 }
+
+/*const e = setInterval(()=>{
+  const conv = convergence();
+  if(conv===100){
+    clearInterval(e)
+  }
+  console.log('convergence ', conv+ '%')
+}, 3 * 1000)*/
+
+
+ranking = (neighbor, callkack) => (a, b) => {
+  const getDistance = (descriptor1, descriptor2) => {
+    const { x: xa, y: ya, z:za } = descriptor1;
+    const { x: xb, y: yb, z:zb } = descriptor2;
+    const dx = xa - xb;
+    const dy = ya - yb;
+    const dz = za - zb;
+    return Math.sqrt(dx * dx + dy * dy);
+    // return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  };
+
+  const distanceA = getDistance(neighbor, a);
+  const distanceB = getDistance(neighbor, b);
+  if(distanceA === distanceB){
+    callkack(neighbor, a, b)
+  }
+  return distanceA - distanceB;
+}
+
+
+
+let peersNeighbours = () => peers.map( p => p.foglet.overlay('tman')._network.getNeighbours())
+
+let getPeersF = () => deepcopy(peers.map(p => {
+  descriptor = p.foglet.overlay('tman')._network._rps.options.descriptor
+  descriptor.id = p.foglet.overlay('tman')._network.inviewId
+  return descriptor
+}));
+
+
+let equidistance = new Map();
+addToEuidistance = (neighborId, aId, bId) => {
+  if(!equidistance.has(neighborId)){
+    equidistance.set(neighborId, new Set())
+  }
+  equidistance.get(neighborId).add(aId+'-'+bId)
+  equidistance.get(neighborId).add(bId+'-'+aId)
+}
+
+
+let getRanked = () => {
+  let datacopy = deepcopy(getPeersF())
+  return deepcopy(getPeersF()).map(p => deepcopy(datacopy.filter((p1 => p.id!==p1.id)).sort(ranking(p, (neighbor, a, b)=>{
+    //console.log("Ranking equal",neighbor, a, b)
+    addToEuidistance(neighbor.id, a.id, b.id)
+  })).slice(0,MAX_PEERS)))
+}
+
+compareNeighbours = (tab1, tab2) => {
+  if(tab1.length !== tab2.length){
+    new Error("Require same size")
+    return;
+  }
+  const reducer = (acc, val) => acc + val;
+  const iterator = equidistance.values()
+  return  Math.floor((tab1.map((value, index)=>{
+    let a = new Set(value);
+    let b = new Set(tab2[index]);
+    let union = new Set([...a, ...b]);
+    let differenceA = new Set([...a].filter(x => !b.has(x)));
+    let differenceB = new Set([...b].filter(x => !a.has(x)));
+    let unionAB = new Set([...differenceA, ...differenceB]);
+    
+    let contains = false
+    let nextIte = iterator.next().value
+    if(nextIte){
+    for (let id of unionAB.values()) {
+        for (let id1 of unionAB.values()) {
+          if(nextIte.has(id+'-'+id1)){
+            contains = true
+          }
+        } 
+      }
+    }
+    let numerateur = b;
+    if(contains && b.size !== union.size){
+      numerateur = new Set([...b, ...unionAB]);
+    }
+    // console.log(index, contains, a.size !== union.size)
+    return (numerateur.size/union.size)
+  }).reduce(reducer)/ tab1.length)* 100)
+}
+
+doConvergence = () => {
+  let ranked = getRanked().map(r=>r.map(r1=>r1.id));
+  let span = document.getElementById("converge");
+
+  const i = setInterval(()=>{
+    const conv = compareNeighbours(ranked, peersNeighbours());
+    if(conv===100){
+      clearInterval(i)
+    }
+    span.innerHTML = conv+ '%'
+    // console.log(conv+ '%')
+  }, 3 * 1000)
+}
+
+
+doConvergence();

@@ -17,3 +17,16 @@ const forEachPromise = async (array, callback) => {
   });
   return result;
 };
+
+
+
+const deepcopy = (object) => {
+  let result = null
+  try {
+      result = JSON.parse(JSON.stringify(object))
+  } catch(e) {
+      console.log("Imposible to parse")
+      result = null
+  }
+  return result
+}
